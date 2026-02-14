@@ -23,12 +23,29 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+
+# --- Helper: Secrets Management (Local vs Streamlit Cloud) ---
+def get_secret(key):
+    """
+    Retrieves secret from Streamlit secrets (Cloud) or os.environ (Local).
+    Prioritizes Streamlit secrets.
+    """
+    # 1. Try Streamlit Secrets
+    try:
+        if key in st.secrets:
+            return st.secrets[key]
+    except FileNotFoundError:
+        pass # No secrets.toml found
+        
+    # 2. Try OS Environment (Local .env)
+    return os.environ.get(key)
+
 # --- LLM Ensemble Class ---
 class LLMEnsemble:
     def __init__(self):
-        self.gemini_key = os.environ.get("GOOGLE_API_KEY")
-        self.mistral_key = os.environ.get("MISTRAL_API_KEY")
-        self.groq_key = os.environ.get("GROQ_API_KEY")
+        self.gemini_key = get_secret("GOOGLE_API_KEY")
+        self.mistral_key = get_secret("MISTRAL_API_KEY")
+        self.groq_key = get_secret("GROQ_API_KEY")
         
         self.gemini_client = None
         self.mistral_client = None
@@ -42,6 +59,8 @@ class LLMEnsemble:
                 self.gemini_client = genai.Client(api_key=self.gemini_key)
             except Exception as e:
                 st.error(f"Gemini Init Error: {e}")
+        else:
+            st.warning("GOOGLE_API_KEY not found in secrets.")
         
         if self.mistral_key:
             try:
@@ -333,7 +352,7 @@ import io
 
 @st.cache_resource
 def get_cipher():
-    key = os.environ.get("VAULT_KEY")
+    key = get_secret("VAULT_KEY")
     if key:
         return Fernet(key)
     return None

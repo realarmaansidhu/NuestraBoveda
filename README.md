@@ -59,15 +59,27 @@ This repository contains the source code *engine*. You must provide your own pri
 
 4.  **Add Private Assets (Encrypted or Plain)**
     *   **Option A (Local)**: Place your `whatsapp_chat.txt` and `assets/*` files normally. The app reads them as plaintext if no `.enc` version exists.
-    *   **Option B (Public Repo)**: Run `python encrypt_vault.py` to encrypt your assets. This generates `.enc` files and a `secret.key`.
+    *   **Option B (Public Repo - Recommended)**: Run `python encrypt_vault.py` to encrypt your assets.
         *   Commit the `.enc` files.
-        *   Add the content of `secret.key` to your `.env` as `VAULT_KEY='...'`.
-        *   The app will automatically decrypt them at runtime.
+        *   Add `VAULT_KEY` to your `.env` (local) or Streamlit Secrets (Cloud).
 
 5.  **Launch**
     ```bash
     streamlit run app.py
     ```
+
+## ☁️ Deployment on Streamlit Cloud
+
+1.  Push your code to GitHub (ensure `.env`, `whatsapp_chat.txt` and unencrypted assets are IGNORED).
+2.  Go to [share.streamlit.io](https://share.streamlit.io) and deploy the repo.
+3.  **Advanced Settings -> Secrets**:
+    Copy the contents of your `.env` file here. It should look like this:
+    ```toml
+    GOOGLE_API_KEY = "..."
+    VAULT_KEY = "..."
+    # etc...
+    ```
+4.  The app will auto-detect the cloud secrets and decrypt your assets!
 
 ## 🔒 Privacy Notice
 
