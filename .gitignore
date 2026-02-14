@@ -1,0 +1,33 @@
+
+# Environment Variables (Secrets)
+.env
+
+# Virtual Environment
+environ/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+
+# Mac OS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Streamlit
+.streamlit/
+
+# --- PRIVATE DATA & MEDIA ---
+# Ignore the actual chat history
+whatsapp_chat.txt
+
+# Ignore all contents of assets...
+assets/*
+
+# ...Except allow these specific example/public files
+!assets/example_memories.json
+!assets/.gitkeep
