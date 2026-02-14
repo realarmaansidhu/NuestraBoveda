@@ -57,10 +57,12 @@ This repository contains the source code *engine*. You must provide your own pri
     # Edit .env with your keys for Google, Mistral, and Groq
     ```
 
-4.  **Add Private Assets**
-    *   Create a file `whatsapp_chat.txt` in the root directory for the Ghost Writer.
-    *   Populate `assets/memories.json` with your memory objects.
-    *   Add media files (images/videos) to the `assets/` folder.
+4.  **Add Private Assets (Encrypted or Plain)**
+    *   **Option A (Local)**: Place your `whatsapp_chat.txt` and `assets/*` files normally. The app reads them as plaintext if no `.enc` version exists.
+    *   **Option B (Public Repo)**: Run `python encrypt_vault.py` to encrypt your assets. This generates `.enc` files and a `secret.key`.
+        *   Commit the `.enc` files.
+        *   Add the content of `secret.key` to your `.env` as `VAULT_KEY='...'`.
+        *   The app will automatically decrypt them at runtime.
 
 5.  **Launch**
     ```bash
@@ -70,8 +72,11 @@ This repository contains the source code *engine*. You must provide your own pri
 ## 🔒 Privacy Notice
 
 This project is open-source, but it is designed to host **highly private data**.
-*   **Code**: The logic is public and available in this repo.
-*   **Data**: Your chat logs (`whatsapp_chat.txt`), memories (`memories.json`), and API keys (`.env`) are **Git-Ignored** by default. **NEVER** verify these files into version control.
+*   **Code**: The logic is public.
+*   **Data**: 
+    *   **Git-Ignored**: Plaintext `whatsapp_chat.txt` and `assets/*` are ignored.
+    *   **Encrypted**: You can safely commit `*.enc` files. They are AES-256 encrypted and unreadable without the `VAULT_KEY`.
+    *   **Secrets**: API keys and `VAULT_KEY` live in `.env` (never committed).
 
 ---
 *Created by Armaan Sidhu*
