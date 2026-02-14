@@ -4,3 +4,4 @@ mistralai
 groq
 python-dotenv
 pytz
+cryptography

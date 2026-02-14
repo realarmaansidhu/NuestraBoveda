@@ -326,6 +326,68 @@ class SecurityLayer:
 
 security = SecurityLayer()
 
+
+# --- Decryption Service ---
+from cryptography.fernet import Fernet
+import io
+
+@st.cache_resource
+def get_cipher():
+    key = os.environ.get("VAULT_KEY")
+    if key:
+        return Fernet(key)
+    return None
+
+def decrypt_data(file_path, is_json=False, is_text=False):
+    """
+    Decrypts a file and returns its content.
+    If VAULT_KEY is invalid or file not encrypted, tries to read as plain text backup.
+    """
+    cipher = get_cipher()
+    
+    # Try Encrypted Path first
+    enc_path = file_path + ".enc"
+    
+    if os.path.exists(enc_path) and cipher:
+        try:
+            with open(enc_path, "rb") as f:
+                encrypted_data = f.read()
+            decrypted_data = cipher.decrypt(encrypted_data)
+            
+            if is_json:
+                return json.loads(decrypted_data.decode('utf-8'))
+            if is_text:
+                return decrypted_data.decode('utf-8')
+            return decrypted_data # Return bytes for media
+            
+        except Exception as e:
+            st.error(f"Decryption Error for {file_path}: {e}")
+            return None
+
+    # Fallback: Read plaintext file (for local dev or if not encrypted)
+    if os.path.exists(file_path):
+        if is_json:
+            with open(file_path, 'r') as f: return json.load(f)
+        if is_text:
+            with open(file_path, 'r', encoding='utf-8') as f: return f.read()
+        with open(file_path, 'rb') as f: return f.read()
+        
+    return None
+
+# --- Helper Functions (Updated for Encryption) ---
+@st.cache_data
+def load_memories():
+    data = decrypt_data('assets/memories.json', is_json=True)
+    return data if data else []
+
+@st.cache_data
+def load_chat_history():
+    # Only read last 15000 chars even from encrypted data
+    text = decrypt_data('whatsapp_chat.txt', is_text=True)
+    if text:
+        return text[-15000:]
+    return ""
+
 def parser_date_input(input_str):
     """
     Robustly parses flexible date strings into (YYYY, MM, DD) tuple.
@@ -692,17 +754,22 @@ def render_vault():
                             
                             c1, c2 = st.columns([1, 1])
                             with c1:
-                                 # Handle image/video display
+                                 # Decrypt and display image/video
                                  file_path = result.get("file_path", "")
-                                 if os.path.exists(file_path):
+                                 
+                                 # Try to decrypt data
+                                 file_data = decrypt_data(file_path)
+                                 
+                                 if file_data:
                                      st.markdown(f"<div style='border-radius: 12px; overflow: hidden; box-shadow: 0 0 30px rgba(0,210,255,0.3); border: 1px solid rgba(0,210,255,0.5);'>", unsafe_allow_html=True)
                                      if file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
-                                         st.image(file_path, use_container_width=True)
+                                         st.image(file_data, use_container_width=True)
                                      elif file_path.lower().endswith(('.mp4', '.mov')):
-                                         st.video(file_path)
+                                         # Streamlit video needs file path or bytes/io
+                                         st.video(io.BytesIO(file_data))
                                      st.markdown("</div>", unsafe_allow_html=True)
                                  else:
-                                     st.warning(f"Memory artifact missing from vault: {file_path}")
+                                     st.warning(f"Memory artifact missing or locked: {file_path}")
 
                             with c2:
                                 st.markdown(f"""

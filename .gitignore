@@ -31,3 +31,7 @@ assets/*
 # ...Except allow these specific example/public files
 !assets/example_memories.json
 !assets/.gitkeep
+
+# Allow Encrypted Files
+!*.enc
+!assets/*.enc
