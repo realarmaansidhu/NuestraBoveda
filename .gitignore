@@ -35,3 +35,7 @@ assets/*
 # Allow Encrypted Files
 !*.enc
 !assets/*.enc
+
+# Security Keys (NEVER COMMIT)
+secret.key
+*.key
