@@ -407,10 +407,51 @@ def load_chat_history():
         return text[-15000:]
     return ""
 
+
+# --- Translations & Bilingual Support ---
+TRANSLATIONS = {
+    "en": {
+        "auth_user": "USER AUTHENTICATED",
+        "tab_oracle": "🔮 MEMORY ORACLE",
+        "tab_ghost": "👻 GHOST WRITER",
+        "mood_label": "CURRENT EMOTIONAL STATE",
+        "mood_placeholder": "Analyze mood parameters...",
+        "memory_empty": "Memory banks are empty (assets/memories.json not found).",
+        "oracle_loading": "Accessing Neural Archives...",
+        "oracle_error": "The Oracle is clouded: {}",
+        "ghost_intro": "[ CONSCIOUSNESS UPLOAD COMPLETE ]",
+        "ai_model": "AI MODEL",
+        "selection_logic": "SELECTION LOGIC",
+        "btn_anghily": "🙎‍♀️ I am Anghily (Spanish)",
+        "btn_armaan": "🙎‍♂️ I am Armaan (English)",
+    },
+    "es": {
+        "auth_user": "USUARIO AUTENTICADO",
+        "tab_oracle": "🔮 ORÁCULO DE MEMORIA",
+        "tab_ghost": "👻 ESCRITOR FANTASMA",
+        "mood_label": "ESTADO EMOCIONAL ACTUAL",
+        "mood_placeholder": "Analizando parámetros emocionales...",
+        "memory_empty": "Los bancos de memoria están vacíos (no se encuentra assets/memories.json).",
+        "oracle_loading": "Accediendo a los Archivos Neuronales...",
+        "oracle_error": "El Oráculo está nublado: {}",
+        "ghost_intro": "[ CARGA DE CONCIENCIA COMPLETA ]",
+        "ai_model": "MODELO IA",
+        "selection_logic": "LÓGICA DE SELECCIÓN",
+        "btn_anghily": "🙎‍♀️ Soy Anghily (Español)",
+        "btn_armaan": "🙎‍♂️ Soy Armaan (Inglés)",
+    }
+}
+
+def get_text(key):
+    """Retrieve text based on current user's language preference."""
+    lang = "es" if st.session_state.current_user == "Anghily" else "en"
+    return TRANSLATIONS[lang].get(key, key)
+
+
 def parser_date_input(input_str):
     """
     Robustly parses flexible date strings into (YYYY, MM, DD) tuple.
-    Accepts: 1/1/26, 01-01-2026, 1 jan 2026, 1st jan 26, etc.
+    Accepts: 1/1/26, 01-01-2026, 1 jan 2026, 1st jan 26, 1.1.26, 26/1/1 etc.
     """
     if not input_str:
         return None
@@ -429,23 +470,25 @@ def parser_date_input(input_str):
 
     input_str = input_str.lower().strip()
     
-    # Check for Year 2026
+    # Check for Year 2026 (Mandatory)
     if "26" not in input_str:
         security.log_failure()
         return None
         
-    # Check for Jan/01/1
+    # Check for Jan/01/1 (Mandatory)
     if not any(x in input_str for x in ["jan", "01", "1"]):
         security.log_failure()
         return None
         
-    # Valid patterns for 1st Jan 2026
-    clean = re.sub(r'st|nd|rd|th|/|-|,|\s', '', input_str)
+    # Valid patterns that resolve to "1st Jan 2026"
+    # We strip common separators to create a "fingerprint"
+    clean = re.sub(r'st|nd|rd|th|/|-|\.|,|\s', '', input_str)
     
-    # Possible permutations for 1st Jan 2026
+    # Expanded Fingerprints for 1.1.26, 26.1.1, etc.
     valid_fingerprints = [
         "1jan2026", "1jan26", "jan12026", "jan126",
-        "01012026", "010126", "1126", "112026"
+        "01012026", "010126", "1126", "112026", 
+        "260101", "20260101", "2611", "202611" # For YYYY/MM/DD formats
     ]
     
     if clean in valid_fingerprints:
@@ -710,14 +753,14 @@ def render_identity():
     c1, c2, c3, c4 = st.columns([1, 2, 2, 1])
     
     with c2:
-        if st.button("🙎‍♀️ I am Anghily", use_container_width=True, type="primary"):
+        if st.button(TRANSLATIONS["es"]["btn_anghily"], use_container_width=True, type="primary"):
             st.session_state.current_user = "Anghily"
             st.session_state.target_persona = "Armaan"
             st.session_state.identified = True
             st.rerun()
             
     with c3:
-        if st.button("🙎‍♂️ I am Armaan", use_container_width=True, type="primary"):
+        if st.button(TRANSLATIONS["en"]["btn_armaan"], use_container_width=True, type="primary"):
             st.session_state.current_user = "Armaan"
             st.session_state.target_persona = "Anghily"
             st.session_state.identified = True
@@ -725,25 +768,32 @@ def render_identity():
 
 # --- State 3: The Vault (Main App) ---
 def render_vault():
-    st.markdown(f"<div style='text-align: center; margin-bottom: 20px;'><span style='color: #00d2ff; letter-spacing: 2px;'>USER AUTHENTICATED:</span> <span style='color: #fff; font-weight: bold;'>{st.session_state.current_user.upper()}</span></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align: center; margin-bottom: 20px;'><span style='color: #00d2ff; letter-spacing: 2px;'>{get_text('auth_user')}:</span> <span style='color: #fff; font-weight: bold;'>{st.session_state.current_user.upper()}</span></div>", unsafe_allow_html=True)
     
-    tab1, tab2 = st.tabs(["🔮 MEMORY ORACLE", "👻 GHOST WRITER"])
+    # Bilingual Tabs
+    tab1, tab2 = st.tabs([get_text("tab_oracle"), get_text("tab_ghost")])
     
     # --- Tab 1: Memory Oracle ---
     with tab1:
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-        mood = st.text_input("CURRENT EMOTIONAL STATE", placeholder="Analyze mood parameters...", label_visibility="visible")
+        # Bilingual Input
+        mood = st.text_input(get_text("mood_label"), placeholder=get_text("mood_placeholder"), label_visibility="visible")
         st.markdown("</div>", unsafe_allow_html=True)
         
         if mood:
-            with st.spinner("Accessing Neural Archives..."):
+            with st.spinner(get_text("oracle_loading")):
                 memories = load_memories()
                 if not memories:
-                    st.error("Memory banks are empty (assets/memories.json not found).")
+                    st.error(get_text("memory_empty"))
                 else:
                     try:
+                        # Language-aware prompt
+                        intro_prompt = "You are the magical curator of a couple's love story."
+                        if st.session_state.current_user == "Anghily":
+                             intro_prompt += " The user speaks Spanish. Analyze the mood in Spanish context, but the memories are in English. The final poetic message MUST be in Spanish (Latin American)."
+                        
                         prompt = f"""
-                        You are the magical curator of a couple's love story.
+                        {intro_prompt}
                         User ({st.session_state.current_user}) is feeling: '{mood}'.
                         Target Persona (Author of message): {st.session_state.target_persona}.
                         
@@ -797,10 +847,10 @@ def render_vault():
                                         "{result.get('poetic_message', '')}"
                                     </div>
                                     <div style='margin-top: 20px; font-size: 0.8rem; color: #00d2ff;'>
-                                        AI MODEL: {model_used}
+                                        {get_text('ai_model')}: {model_used}
                                     </div>
                                     <div style='margin-top: 10px; font-size: 0.7rem; color: #555;'>
-                                        SELECTION LOGIC: {result.get('reasoning', 'N/A')}
+                                        {get_text('selection_logic')}: {result.get('reasoning', 'N/A')}
                                     </div>
                                 </div>
                                 """, unsafe_allow_html=True)
@@ -808,11 +858,11 @@ def render_vault():
                             st.error(f"Oracle returned gibberish ({model_used}): {response_text}")
                             
                     except Exception as e:
-                        st.error(f"The Oracle is clouded: {e}")
+                        st.error(get_text("oracle_error").format(e))
 
     # --- Tab 2: Ghost Writer ---
     with tab2:
-        st.markdown("<p style='text-align: center; color: #00d2ff; font-family: monospace; letter-spacing: 2px;'>[ CONSCIOUSNESS UPLOAD COMPLETE ]</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; color: #00d2ff; font-family: monospace; letter-spacing: 2px;'>{get_text('ghost_intro')}</p>", unsafe_allow_html=True)
         
         # Display persistent chat history
         for msg in st.session_state.ghost_messages:
